@@ -9,3 +9,6 @@ Formato: data · dúvida · escolha · motivo.
 - 2026-11-08 · Verificação em duas etapas (A02). · Simulada no modo demo (código fixo `000000`); real depende do TOTP do Supabase (MFA). · Não inventar segredo.
 - 2026-11-08 · Saída sem nota na mesma empresa (G04/G12). · Padrão: exige nota; parâmetro em N11 permite desligar. · Mais seguro (RN-015).
 - 2026-11-08 · Custo de kit inclui montagem. · Padrão "não" (soma só componentes), parâmetro em N11. · Mais simples.
+- 2026-11-08 · UF de origem da empresa (para sugerir tributação em G02/K02). · Assumida "RS" (constante `DEFAULT_ORIGIN_UF`); cadastro de UF por empresa fica para N06. · Não inventar dado fiscal; a regra em si é dado editável (C13).
+- 2026-11-08 · Códigos de barras das etiquetas. · Code 39 gerado em SVG sem dependência; QR/Datamatrix ficam para quando o modelo da impressora for definido (B04). · Mais simples e imprimível no navegador.
+- 2026-11-08 · Fluxo G12 → K02 e G04 → K02. · K02 é a única tela que transmite a nota (saída, transferência entre empresas ou manual); a baixa de estoque acontece junto da autorização (RN-015). · Evita duas rotas para a mesma regra.

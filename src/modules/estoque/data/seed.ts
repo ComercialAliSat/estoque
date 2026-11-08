@@ -1,5 +1,6 @@
 import { nextId, nowIso, postMovement } from "../domain/core";
-import { createContract, createWorkOrder, finalizeWorkOrder, addChips, createLink, sendMaterialsToWO, setWOCosts } from "../domain/logistics";
+import { createContract, createWorkOrder, finalizeWorkOrder, addChips, createLink, sendMaterialsToWO, setWOCosts, createTransfer, reviewTransfer, openAssist, startKitOrder, startInventory } from "../domain/logistics";
+import { saveOrder } from "../domain/purchasing";
 import { closeConference, createInbound, scanSerial, startConference } from "../domain/inbound";
 import { addOutboundSerial, createOutbound, requestOutboundInvoice, reviewOutbound, transmitOutboundInvoice } from "../domain/sales";
 import { generateMotherCodes } from "../domain/mothercode";
@@ -19,6 +20,7 @@ export function emptyDb(): Db {
     motherCodes: [], invoices: [], outbounds: [], taxTypes: [], transfers: [], losses: [], reservations: [],
     returns: [], contracts: [], workOrders: [], assists: [], kitOrders: [], chips: [], links: [], inventories: [],
     audit: [], exports: [], events: [], decisions: [], productTax: [], hcontrol: [],
+    areaTemplates: { estoque: ["ver", "criar", "editar", "confirmar", "exportar"], financeiro: ["ver", "criar", "editar", "exportar"], operacoes: ["ver", "criar", "editar", "confirmar"], fiscal: ["ver", "criar", "editar", "confirmar", "exportar"], auditoria: ["ver", "exportar"] },
     params: { transferSameCompanyNeedsInvoice: true, kitCostIncludesAssembly: false, transitDays: 5 },
     idempotency: {}, seq: 0,
   };
@@ -190,6 +192,17 @@ export function createSeedDb(): Db {
 
   // Evento de integração com erro para a fila (M03)
   db.events.push({ id: nextId(db, "evt"), system: "crm", type: "opportunity.won", idempotencyKey: "crm-evt-demo-1", payload: { opportunityId: "OPP-1" }, status: "erro", attempts: 1, error: "Séries não informadas na oportunidade.", at: nowIso() });
+
+  // Para navegar de manhã: pedido aguardando aprovação, transferência revisada, chamado de assistência, ordem de kit e inventário.
+  saveOrder(db, { companyId: TRAXOR, supplierId: "f_br", currency: "BRL", items: [{ productId: "p_cam", qty: 10, unitPrice: 118 }] }, true, ADMIN2);
+  const tr = createTransfer(db, { companyId: TRAXOR, kind: "tecnico_terceiro", fromLocationId: "l_dep_t", toLocationId: "l_tec_t", serials: ["CAM0002"] }, ADMIN);
+  reviewTransfer(db, tr.id);
+  openAssist(db, { companyId: TRAXOR, serial: "CAM0003", defect: "Sem imagem (demonstração)" }, ADMIN);
+  startKitOrder(db, { companyId: TRAXOR, kitProductId: "p_kit", qty: 1 });
+  startInventory(db, TRAXOR, "l_dep_t", "Local Depósito Traxor");
+
+  // Oportunidade ganha no CRM aguardando reserva (I01/I02)
+  db.events.push({ id: nextId(db, "evt"), system: "crm", type: "opportunity.won", idempotencyKey: "crm-evt-demo-2", payload: { opportunityId: "OPP-2", customerId: "c_2", value: 1500, items: [{ productId: "p_cam", qty: 2 }] }, status: "recebido", attempts: 0, at: nowIso() });
 
   db.decisions = DECISION_POINTS.map((d) => ({ ...d, decided: false }));
   // O rateio da importação fica aberto de propósito: custo provisório visível em E08/L03.

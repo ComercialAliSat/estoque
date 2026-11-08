@@ -508,7 +508,7 @@ export function createLink(db: Db, companyId: Id, l: Omit<Link, "id" | "companyI
     if (l.iccid) {
       const chip = db.chips.find((c) => c.iccid === l.iccid);
       if (!chip) throw new DomainError("chip", "ICCID não cadastrado.");
-      if (chip.status === "vinculado" && !db.links.some((x) => x.to === null && x.iccid === l.iccid && x.serial === serial)) {
+      if (db.links.some((x) => x.to === null && x.iccid === l.iccid && x.serial !== serial)) {
         throw new DomainError("chip_em_uso", "Chip já vinculado a outro equipamento.");
       }
       chip.status = "vinculado";

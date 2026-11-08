@@ -4,11 +4,17 @@ import { reserveSerials, releaseReservation } from "../../domain/sales";
 import { canSeeCost } from "../../domain/permissions";
 import { integrationMode, type CostAnswer, type CostQuery, type CrmPort } from "../ports";
 
-/** Implementação simulada: opera direto no banco do módulo, sem chamar o CRM de verdade. */
-export function createMockCrm(getDb: () => Db, userId: () => string): CrmPort {
+/** Acesso ao banco do módulo: leitura direta e escrita atômica/persistida. */
+export interface DbIO {
+  read: () => Db;
+  write: <T>(fn: (db: Db) => T) => T;
+}
+
+/** Implementação simulada: opera no banco do módulo, sem chamar o CRM de verdade. */
+export function createMockCrm(io: DbIO, userId: () => string): CrmPort {
   return {
     async queryCost(q: CostQuery, companyId: string): Promise<CostAnswer[]> {
-      const db = getDb();
+      const db = io.read();
       const profile = db.profiles.find((p) => p.id === userId());
       if (!canSeeCost(profile, companyId)) throw new Error("Sem permissão de custo.");
       if (q.serial) {
@@ -21,11 +27,11 @@ export function createMockCrm(getDb: () => Db, userId: () => string): CrmPort {
         .map((s) => ({ productId: s.productId, serial: s.serial, cost: s.cost, provisional: s.costStatus === "provisorio" }));
     },
     async reserve(input) {
-      const r = reserveSerials(getDb(), input, userId());
+      const r = io.write((db) => reserveSerials(db, input, userId()));
       return { reservationId: r.id };
     },
     async handleEvent(event) {
-      const db = getDb();
+      io.write((db) => {
       // Reprocessar não duplica: evento já processado é ignorado.
       const existing = db.events.find((e) => e.idempotencyKey === event.idempotencyKey);
       if (existing?.status === "processado") return;
@@ -59,6 +65,7 @@ export function createMockCrm(getDb: () => Db, userId: () => string): CrmPort {
         ev.status = "erro";
         ev.error = (e as Error).message;
       }
+      });
     },
   };
 }
@@ -71,6 +78,6 @@ export function createRealCrm(): CrmPort {
   return { queryCost: off, reserve: off, handleEvent: off };
 }
 
-export function getCrm(getDb: () => Db, userId: () => string): CrmPort {
-  return integrationMode("CRM") === "real" ? createRealCrm() : createMockCrm(getDb, userId);
+export function getCrm(io: DbIO, userId: () => string): CrmPort {
+  return integrationMode("CRM") === "real" ? createRealCrm() : createMockCrm(io, userId);
 }

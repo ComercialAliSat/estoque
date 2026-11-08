@@ -179,3 +179,17 @@ export function inutilize(db: Db, companyId: Id, from: number, to: number, reaso
   if (used) throw new DomainError("numero_usado", "Só números não usados podem ser inutilizados.");
   audit(db, by, "nota.inutilizacao", `${from}-${to}`, companyId, reason);
 }
+
+/** UF de origem assumida para sugerir o tipo de tributação (a UF da empresa ainda não é cadastrada; ver docs/decisions.md). */
+export const DEFAULT_ORIGIN_UF = "RS";
+
+export function suggestTaxType(
+  db: Db,
+  q: { companyId: Id; operation: Invoice["operation"]; customerId?: Id; partnerFinancier?: boolean },
+): TaxType | undefined {
+  const c = db.customers.find((x) => x.id === q.customerId);
+  return pickTaxType(db, {
+    companyId: q.companyId, operation: q.operation, ufFrom: DEFAULT_ORIGIN_UF, ufTo: c?.uf ?? DEFAULT_ORIGIN_UF,
+    taxpayer: !!c?.taxpayer, partnerFinancier: q.partnerFinancier,
+  });
+}

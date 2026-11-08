@@ -174,7 +174,7 @@ export function ConfirmButton({ label, message, onConfirm, variant = "danger", d
 }
 
 /** Pede um motivo (obrigatório) antes de executar. */
-export function ReasonButton({ label, title, onSubmit, variant = "secondary", disabled, minLength = 1 }: { label: string; title?: string; onSubmit: (reason: string) => void; variant?: "primary" | "secondary" | "danger"; disabled?: boolean; minLength?: number }) {
+export function ReasonButton({ label, title, onSubmit, variant = "secondary", disabled, minLength = 1 }: { label: string; title?: string; onSubmit: (reason: string) => void; variant?: "primary" | "secondary" | "danger" | "ghost"; disabled?: boolean; minLength?: number }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   return (

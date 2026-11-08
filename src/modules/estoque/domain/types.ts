@@ -582,6 +582,7 @@ export interface Db {
   decisions: DecisionPoint[];
   productTax: ProductTax[];
   hcontrol: HControlLoad[];
+  areaTemplates: Record<Area, Action[]>;
   params: Params;
   idempotency: Record<string, unknown>;
   seq: number;
